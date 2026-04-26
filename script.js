@@ -1,193 +1,93 @@
-const { createClient } = supabase;
+// Carregar Supabase do CDN (precisa estar no index.html antes deste script)
+// <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 const SUPABASE_URL = 'https://bcxjmoikvldnweuvxieb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjeGptb2lrdmxkbndldXZ4aWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTM1MDAsImV4cCI6MjA5MjcyOTUwMH0.foiZ2SrJb7Tf3yNYPfFH7mfNVF0V0tc3R4LcBR3q_1o';
 
-// Inicializa o cliente Supabase com as configurações reais
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Função auxiliar para validar formato de email
-
+// Validação de email
 function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-// Função para exibir mensagens de erro ou sucesso
+// Mensagens
 function showMessage(message, type = 'error') {
-  const messagesDiv = document.getElementById('messages');
-  if (messagesDiv) {
-    messagesDiv.innerHTML = `<div class="${type}-message">${message}</div>`;
-    // Limpa a mensagem após 5 segundos
-    setTimeout(() => {
-      messagesDiv.innerHTML = '';
-    }, 5000);
-  } else {
-    // Fallback para alert se não houver div de mensagens
-    alert(message);
-  }
+  alert(message);
+  console.log(`[${type.toUpperCase()}] ${message}`);
 }
 
-function showError(message) {
-  showMessage(message, 'error');
-}
+// LOGIN COM SUPABASE REAL
+async function handleLogin(e) {
+  e.preventDefault();
+  
+  const email = document.getElementById('loginEmail')?.value.trim();
+  const password = document.getElementById('loginPassword')?.value;
 
-function showSuccess(message) {
-  showMessage(message, 'success');
-}
-
-// Função de login com validação e integração real com Supabase
-async function login(email, password) {
-  console.log('Tentando login...', { email });
-
-  // Validações
-  if (!email || !password) {
-    showError('Email e senha são obrigatórios');
+  if (!email || !isValidEmail(email)) {
+    showMessage('Email inválido', 'error');
     return;
   }
-  if (!isValidEmail(email)) {
-    showError('Formato de email inválido');
-    return;
-  }
-  if (password.length < 6) {
-    showError('Senha deve ter pelo menos 6 caracteres');
+  if (!password || password.length < 6) {
+    showMessage('Senha deve ter pelo menos 6 caracteres', 'error');
     return;
   }
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    if (error) throw error;
 
-    if (error) {
-      console.error('Erro no login:', error);
-      throw error;
-    }
-
-    console.log('Login realizado com sucesso:', data.user);
-    // Redireciona para dashboard em caso de sucesso
+    console.log('✓ Login bem-sucedido');
+    localStorage.setItem('user', email);
     window.location.href = '/dashboard.html';
   } catch (error) {
-    showError(error.message);
+    showMessage(error.message || 'Erro no login', 'error');
   }
 }
 
-// Função de cadastro com validação e integração real com Supabase
-async function signup(email, password, confirmPassword) {
-  console.log('Tentando cadastro...', { email });
+// CADASTRO COM SUPABASE REAL
+async function handleSignup(e) {
+  e.preventDefault();
+  
+  const email = document.getElementById('signupEmail')?.value.trim();
+  const password = document.getElementById('signupPassword')?.value;
+  const confirmPassword = document.getElementById('signupConfirmPassword')?.value;
 
-  // Validações
-  if (!email || !password || !confirmPassword) {
-    showError('Todos os campos são obrigatórios');
+  if (!email || !isValidEmail(email)) {
+    showMessage('Email inválido', 'error');
     return;
   }
-  if (!isValidEmail(email)) {
-    showError('Formato de email inválido');
-    return;
-  }
-  if (password.length < 6) {
-    showError('Senha deve ter pelo menos 6 caracteres');
+  if (!password || password.length < 6) {
+    showMessage('Senha deve ter pelo menos 6 caracteres', 'error');
     return;
   }
   if (password !== confirmPassword) {
-    showError('As senhas não coincidem');
+    showMessage('As senhas não coincidem', 'error');
     return;
   }
 
   try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password
-    });
-
-    if (error) {
-      console.error('Erro no cadastro:', error);
-      throw error;
-    }
-
-    console.log('Cadastro realizado, aguardando confirmação:', data);
-    showSuccess('Cadastro realizado com sucesso! Verifique seu email para confirmar.');
-  } catch (error) {
-    showError(error.message);
-  }
-}
-
-// Função de logout
-async function logout() {
-  console.log('Fazendo logout...');
-  try {
-    const { error } = await supabase.auth.signOut();
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    
     if (error) throw error;
-    console.log('Logout realizado');
-    showSuccess('Logout realizado com sucesso');
-    // Opcional: redirecionar para login
-    // window.location.href = '/index.html';
+
+    showMessage('Cadastro bem-sucedido! Verifique seu email.', 'success');
+    console.log('✓ Cadastro criado');
   } catch (error) {
-    console.error('Erro no logout:', error);
-    showError(error.message);
+    showMessage(error.message || 'Erro no cadastro', 'error');
   }
 }
 
-// Função para verificar se o usuário está logado
-async function checkAuth() {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      console.log('Usuário já está logado:', session.user.email);
-      // Opcional: mostrar elementos de usuário logado ou redirecionar
-      // window.location.href = '/dashboard.html';
-    } else {
-      console.log('Nenhum usuário logado');
-    }
-  } catch (error) {
-    console.error('Erro ao verificar autenticação:', error);
-  }
-}
-
-// Listener global para mudanças de estado de autenticação
+// Event listeners quando página carrega
 document.addEventListener('DOMContentLoaded', () => {
-  // Verifica autenticação inicial
-  checkAuth();
+  const loginForm = document.getElementById('loginForm');
+  const signupForm = document.getElementById('signupForm');
 
-  // Listener para mudanças de auth (ex: após login/signup)
-  supabase.auth.onAuthStateChange((event, session) => {
-    console.log('Mudança de estado de auth:', event);
-    if (event === 'SIGNED_IN') {
-      // Redireciona automaticamente após login
-      window.location.href = '/dashboard.html';
-    } else if (event === 'SIGNED_OUT') {
-      console.log('Usuário saiu');
-    }
-  });
-
-  // Event listeners para formulários (assumindo IDs padrão no HTML)
-  const loginForm = document.getElementById('login-form');
   if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('login-email')?.value || '';
-      const password = document.getElementById('login-password')?.value || '';
-      await login(email, password);
-    });
+    loginForm.addEventListener('submit', handleLogin);
   }
-
-  const signupForm = document.getElementById('signup-form');
   if (signupForm) {
-    signupForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('signup-email')?.value || '';
-      const password = document.getElementById('signup-password')?.value || '';
-      const confirmPassword = document.getElementById('signup-confirm-password')?.value || '';
-      await signup(email, password, confirmPassword);
-    });
-  }
-
-  const logoutBtn = document.getElementById('logout-btn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      await logout();
-    });
+    signupForm.addEventListener('submit', handleSignup);
   }
 });
