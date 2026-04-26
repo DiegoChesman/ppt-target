@@ -1,235 +1,193 @@
-// script.js - Lógica e funcionalidades para PPT Target
-// Autor: IA Geradora de Código
-// Linguagem: JavaScript ES6
-// Comentários em Português (Brasil)
+const { createClient } = supabase;
 
-/**
- * Configurações de seletores CSS para elementos HTML.
- * Facilita manutenção e evita repetição de strings.
- */
-const SELECTORS = {
-    LOGIN_FORM: '#loginForm',
-    REGISTER_FORM: '#registerForm',
-    LOGIN_SCREEN: '#loginScreen',
-    REGISTER_SCREEN: '#registerScreen',
-    TOGGLE_LOGIN: '.toggle-login',
-    TOGGLE_REGISTER: '.toggle-register',
-    MESSAGE: '#message'
-};
+const SUPABASE_URL = 'https://bcxjmoikvldnweuvxieb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjeGptb2lrdmxkbndldXZ4aWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTM1MDAsImV4cCI6MjA5MjcyOTUwMH0.foiZ2SrJb7Tf3yNYPfFH7mfNVF0V0tc3R4LcBR3q_1o';
 
-/**
- * Container de mensagens global.
- * Inicializado no DOMContentLoaded.
- */
-let messageContainer = null;
+// Inicializa o cliente Supabase com as configurações reais
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/**
- * Inicialização da aplicação.
- * Adiciona event listeners e configura elementos.
- */
-document.addEventListener('DOMContentLoaded', () => {
-    messageContainer = document.getElementById('message');
+// Função auxiliar para validar formato de email
 
-    if (!messageContainer) {
-        console.error('Elemento #message não encontrado!');
-        return;
-    }
-
-    // Event listener para formulário de login
-    const loginForm = document.querySelector(SELECTORS.LOGIN_FORM);
-    if (loginForm) {
-        loginForm.addEventListener('submit', handleLogin);
-    }
-
-    // Event listener para formulário de cadastro
-    const registerForm = document.querySelector(SELECTORS.REGISTER_FORM);
-    if (registerForm) {
-        registerForm.addEventListener('submit', handleRegister);
-    }
-
-    // Event listeners para alternância de telas
-    document.querySelectorAll(SELECTORS.TOGGLE_LOGIN).forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            showForm('login');
-        });
-    });
-
-    document.querySelectorAll(SELECTORS.TOGGLE_REGISTER).forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            showForm('register');
-        });
-    });
-
-    // Inicialmente, mostra tela de login
-    showForm('login');
-});
-
-/**
- * Valida o formato de um email usando expressão regular.
- * @param {string} email - Email a ser validado.
- * @returns {boolean} - True se válido.
- */
-function validateEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 }
 
-/**
- * Valida a força da senha.
- * Critérios: min 8 chars, 1 maiúscula, 1 minúscula, 1 número.
- * @param {string} password - Senha a validar.
- * @returns {boolean} - True se forte o suficiente.
- */
-function validatePassword(password) {
-    if (password.length < 8) return false;
-    if (!/[A-Z]/.test(password)) return false;
-    if (!/[a-z]/.test(password)) return false;
-    if (!/[0-9]/.test(password)) return false;
-    return true;
-}
-
-/**
- * Mostra o formulário/tela especificada e esconde os outros.
- * @param {string} formName - 'login' ou 'register'.
- */
-function showForm(formName) {
-    // Esconde todas as telas
-    document.querySelectorAll('[id$="-screen"]').forEach(screen => {
-        screen.style.display = 'none';
-    });
-
-    // Mostra a tela selecionada
-    const screen = document.getElementById(`${formName}Screen`);
-    if (screen) {
-        screen.style.display = 'block';
-        clearForm(document.querySelector(SELECTORS[`${formName.toUpperCase()}_FORM`]));
-    }
-}
-
-/**
- * Limpa os campos de um formulário.
- * @param {HTMLFormElement} formElement - Formulário a limpar.
- */
-function clearForm(formElement) {
-    if (formElement) {
-        formElement.reset();
-    }
-}
-
-/**
- * Exibe mensagem de erro ou sucesso.
- * Auto-esconde após 5 segundos.
- * @param {string} message - Texto da mensagem.
- * @param {'error' | 'success'} type - Tipo de mensagem.
- */
-function showMessage(message, type = '') {
-    if (!messageContainer) return;
-
-    messageContainer.textContent = message;
-    messageContainer.className = `message ${type}`;
-    messageContainer.style.display = 'block';
-
-    // Auto-esconde após 5s
+// Função para exibir mensagens de erro ou sucesso
+function showMessage(message, type = 'error') {
+  const messagesDiv = document.getElementById('messages');
+  if (messagesDiv) {
+    messagesDiv.innerHTML = `<div class="${type}-message">${message}</div>`;
+    // Limpa a mensagem após 5 segundos
     setTimeout(() => {
-        messageContainer.style.display = 'none';
+      messagesDiv.innerHTML = '';
     }, 5000);
+  } else {
+    // Fallback para alert se não houver div de mensagens
+    alert(message);
+  }
 }
 
-/**
- * Manipulador assíncrono de submit do login.
- * Valida e prepara para Supabase.
- */
-async function handleLogin(e) {
-    e.preventDefault();
-
-    const form = e.target;
-    const email = form.querySelector('input[name="email"]')?.value.trim();
-    const password = form.querySelector('input[name="password"]')?.value;
-
-    // Validações
-    if (!email || !validateEmail(email)) {
-        showMessage('Por favor, insira um email válido.', 'error');
-        return;
-    }
-
-    if (!password || !validatePassword(password)) {
-        showMessage('Senha deve ter pelo menos 8 caracteres, incluindo maiúscula, minúscula e número.', 'error');
-        return;
-    }
-
-    // Limpa mensagem anterior
-    messageContainer.style.display = 'none';
-
-    // Integração com Supabase (descomente e configure supabase client)
-    /*
-    try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password
-        });
-
-        if (error) throw error;
-
-        showMessage('Login realizado com sucesso! Redirecionando...', 'success');
-        // window.location.href = '/dashboard';
-    } catch (error) {
-        showMessage(error.message || 'Erro no login.', 'error');
-    }
-    */
-
-    // Simulação de sucesso
-    showMessage('Login validado! Integre com Supabase descomentando o código.', 'success');
+function showError(message) {
+  showMessage(message, 'error');
 }
 
-/**
- * Manipulador assíncrono de submit do cadastro.
- * Valida email, senha e confirmação.
- */
-async function handleRegister(e) {
-    e.preventDefault();
-
-    const form = e.target;
-    const email = form.querySelector('input[name="email"]')?.value.trim();
-    const password = form.querySelector('input[name="password"]')?.value;
-    const confirmPassword = form.querySelector('input[name="confirmPassword"]')?.value;
-
-    // Validações
-    if (!email || !validateEmail(email)) {
-        showMessage('Por favor, insira um email válido.', 'error');
-        return;
-    }
-
-    if (!password || !validatePassword(password)) {
-        showMessage('Senha deve ter pelo menos 8 caracteres, incluindo maiúscula, minúscula e número.', 'error');
-        return;
-    }
-
-    if (password !== confirmPassword) {
-        showMessage('As senhas não coincidem. Tente novamente.', 'error');
-        return;
-    }
-
-    // Limpa mensagem anterior
-    messageContainer.style.display = 'none';
-
-    // Integração com Supabase (descomente e configure supabase client)
-    /*
-    try {
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password
-        });
-
-        if (error) throw error;
-
-        showMessage('Cadastro realizado! Verifique seu email para confirmar.', 'success');
-    } catch (error) {
-        showMessage(error.message || 'Erro no cadastro.', 'error');
-    }
-    */
-
-    // Simulação de sucesso
-    showMessage('Cadastro validado! Integre com Supabase descomentando o código.', 'success');
+function showSuccess(message) {
+  showMessage(message, 'success');
 }
+
+// Função de login com validação e integração real com Supabase
+async function login(email, password) {
+  console.log('Tentando login...', { email });
+
+  // Validações
+  if (!email || !password) {
+    showError('Email e senha são obrigatórios');
+    return;
+  }
+  if (!isValidEmail(email)) {
+    showError('Formato de email inválido');
+    return;
+  }
+  if (password.length < 6) {
+    showError('Senha deve ter pelo menos 6 caracteres');
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      console.error('Erro no login:', error);
+      throw error;
+    }
+
+    console.log('Login realizado com sucesso:', data.user);
+    // Redireciona para dashboard em caso de sucesso
+    window.location.href = '/dashboard.html';
+  } catch (error) {
+    showError(error.message);
+  }
+}
+
+// Função de cadastro com validação e integração real com Supabase
+async function signup(email, password, confirmPassword) {
+  console.log('Tentando cadastro...', { email });
+
+  // Validações
+  if (!email || !password || !confirmPassword) {
+    showError('Todos os campos são obrigatórios');
+    return;
+  }
+  if (!isValidEmail(email)) {
+    showError('Formato de email inválido');
+    return;
+  }
+  if (password.length < 6) {
+    showError('Senha deve ter pelo menos 6 caracteres');
+    return;
+  }
+  if (password !== confirmPassword) {
+    showError('As senhas não coincidem');
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password
+    });
+
+    if (error) {
+      console.error('Erro no cadastro:', error);
+      throw error;
+    }
+
+    console.log('Cadastro realizado, aguardando confirmação:', data);
+    showSuccess('Cadastro realizado com sucesso! Verifique seu email para confirmar.');
+  } catch (error) {
+    showError(error.message);
+  }
+}
+
+// Função de logout
+async function logout() {
+  console.log('Fazendo logout...');
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    console.log('Logout realizado');
+    showSuccess('Logout realizado com sucesso');
+    // Opcional: redirecionar para login
+    // window.location.href = '/index.html';
+  } catch (error) {
+    console.error('Erro no logout:', error);
+    showError(error.message);
+  }
+}
+
+// Função para verificar se o usuário está logado
+async function checkAuth() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      console.log('Usuário já está logado:', session.user.email);
+      // Opcional: mostrar elementos de usuário logado ou redirecionar
+      // window.location.href = '/dashboard.html';
+    } else {
+      console.log('Nenhum usuário logado');
+    }
+  } catch (error) {
+    console.error('Erro ao verificar autenticação:', error);
+  }
+}
+
+// Listener global para mudanças de estado de autenticação
+document.addEventListener('DOMContentLoaded', () => {
+  // Verifica autenticação inicial
+  checkAuth();
+
+  // Listener para mudanças de auth (ex: após login/signup)
+  supabase.auth.onAuthStateChange((event, session) => {
+    console.log('Mudança de estado de auth:', event);
+    if (event === 'SIGNED_IN') {
+      // Redireciona automaticamente após login
+      window.location.href = '/dashboard.html';
+    } else if (event === 'SIGNED_OUT') {
+      console.log('Usuário saiu');
+    }
+  });
+
+  // Event listeners para formulários (assumindo IDs padrão no HTML)
+  const loginForm = document.getElementById('login-form');
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email')?.value || '';
+      const password = document.getElementById('login-password')?.value || '';
+      await login(email, password);
+    });
+  }
+
+  const signupForm = document.getElementById('signup-form');
+  if (signupForm) {
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('signup-email')?.value || '';
+      const password = document.getElementById('signup-password')?.value || '';
+      const confirmPassword = document.getElementById('signup-confirm-password')?.value || '';
+      await signup(email, password, confirmPassword);
+    });
+  }
+
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await logout();
+    });
+  }
+});
