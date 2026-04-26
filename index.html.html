@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPT Target - Planner com Resultado</title>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> -->
+    <style>
+        :root {
+            --navy: #1A365D;
+            --azure: #3B82F6;
+            --white: #fff;
+            --light-gray: #f3f4f6;
+            --error: #ef4444;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--navy), var(--azure));
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--navy);
+        }
+        .container {
+            background: var(--white);
+            padding: 2.5rem 2rem;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+        }
+        .logo {
+            margin-bottom: 2rem;
+        }
+        .logo-icon {
+            font-size: 4.5rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .logo h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--navy);
+        }
+        .form {
+            display: none;
+        }
+        .form.active {
+            display: block;
+        }
+        .form h2 {
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            color: var(--navy);
+        }
+        .form input {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form input:focus {
+            outline: none;
+            border-color: var(--azure);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+        .form button {
+            width: 100%;
+            padding: 14px;
+            background: var(--azure);
+            color: var(--white);
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .form button:hover {
+            background: #2563eb;
+        }
+        .toggle-btn {
+            background: transparent;
+            color: var(--azure);
+            border: 2px solid var(--azure);
+            margin-top: 1.5rem;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .toggle-btn:hover {
+            background: var(--azure);
+            color: var(--white);
+        }
+        .error {
+            color: var(--error);
+            font-size: 0.9rem;
+            margin: -0.8rem 0 1rem 0;
+            background: #fef2f2;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 4px solid var(--error);
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 2rem 1.5rem;
+                margin: 1rem;
+            }
+            .logo-icon {
+                font-size: 3.5rem;
+            }
+            .logo h1 {
+                font-size: 1.5rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .logo-icon {
+                font-size: 3rem;
+            }
+            .container {
+                padding: 1.5rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <div class="logo-icon">🕐🎯</div>
+            <h1>PPT Target</h1>
+        </div>
+        <div id="login-form" class="form active">
+            <h2>Login</h2>
+            <form>
+                <input type="email" id="login-email" placeholder="Digite seu email" required>
+                <input type="password" id="login-password" placeholder="Senha" required>
+                <button type="submit">Entrar</button>
+            </form>
+        </div>
+        <div id="register-form" class="form">
+            <h2>Criar Conta</h2>
+            <form>
+                <input type="email" id="reg-email" placeholder="Digite seu email" required>
+                <input type="password" id="reg-password" placeholder="Senha (mín. 6 caracteres)" required>
+                <input type="password" id="reg-confirm-password" placeholder="Confirmar senha" required>
+                <button type="submit">Criar Conta</button>
+            </form>
+        </div>
+        <button id="toggle-btn" class="toggle-btn">Criar Conta</button>
+    </div>
+    <script>
+        // Para conectar com Supabase, descomente e configure:
+        /*
+        const SUPABASE_URL = 'https://your-project.supabase.co';
+        const SUPABASE_ANON_KEY = 'your-anon-key';
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        */
+
+        const toggleBtn = document.getElementById('toggle-btn');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        let isLogin = true;
+
+        toggleBtn.addEventListener('click', () => {
+            if (isLogin) {
+                loginForm.classList.remove('active');
+                registerForm.classList.add('active');
+                toggleBtn.textContent = 'Já tenho conta';
+                isLogin = false;
+            } else {
+                registerForm.classList.remove('active');
+                loginForm.classList.add('active');
+                toggleBtn.textContent = 'Criar Conta';
+                isLogin = true;
+            }
+        });
+
+        function validateEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        function showError(formEl, message) {
+            let errorEl = formEl.querySelector('.error');
+            if (!errorEl) {
+                errorEl = document.createElement('div');
+                errorEl.className = 'error';
+                formEl.insertBefore(errorEl, formEl.querySelector('input'));
+            }
+            errorEl.textContent = message;
+        }
+
+        function clearError(formEl) {
+            const errorEl = formEl.querySelector('.error');
+            if (errorEl) {
+                errorEl.remove();
+            }
+        }
+
+        // Login
+        loginForm.querySelector('form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            clearError(loginForm);
+
+            if (!validateEmail(email)) {
+                showError(loginForm, 'Por favor, insira um email válido.');
+                return;
+            }
+            if (password.length < 6) {
+                showError(loginForm, 'A senha deve ter pelo menos 6 caracteres.');
+                return;
+            }
+
+            // Supabase Login - Descomente para usar
+            /*
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                showError(loginForm, error.message);
+            } else {
+                window.location.href = '/dashboard.html';
+            }
+            */
+            alert('Login simulado com sucesso!');
+        });
+
+        // Register
+        registerForm.querySelector('form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('reg-email').value.trim();
+            const password = document.getElementById('reg-password').value;
+            const confirmPassword = document.getElementById('reg-confirm-password').value;
+            clearError(registerForm);
+
+            if (!validateEmail(email)) {
+                showError(registerForm, 'Por favor, insira um email válido.');
+                return;
+            }
+            if (password.length < 6) {
+                showError(registerForm, 'A senha deve ter pelo menos 6 caracteres.');
+                return;
+            }
+            if (password !== confirmPassword) {
+                showError(registerForm, 'As senhas não coincidem.');
+                return;
+            }
+
+            // Supabase Register - Descomente para usar
+            /*
+            const { data, error } = await supabase.auth.signUp({ email, password });
+            if (error) {
+                showError(registerForm, error.message);
+            } else {
+                alert('Verifique seu email para confirmar a conta!');
+                // Optionally switch to login
+            }
+            */
+            alert('Cadastro simulado com sucesso!');
+        });
+    </script>
+</body>
+</html>
